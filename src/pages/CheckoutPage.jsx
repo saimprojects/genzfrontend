@@ -259,7 +259,7 @@ const CheckoutPage = () => {
       content_name: orderItem.product_name,
       content_type: 'product',
       value: totalAmount,
-      currency: 'PKR',
+      currency: 'USD',
       num_items: productQuantity
     })
 
