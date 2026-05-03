@@ -239,7 +239,7 @@ const CheckoutPage = () => {
     }
   }
 
-  const handlePlaceOrder = async () => {
+const handlePlaceOrder = async () => {
     if (!orderItem) {
       toast.error('No item to order')
       return
@@ -253,13 +253,12 @@ const CheckoutPage = () => {
     const deliveryCharges = parseFloat(productDeliveryCharges)
     const totalAmount = productPrice * productQuantity + deliveryCharges
 
-    // Meta Pixel - InitiateCheckout Event
+    // ✅ Meta Pixel - InitiateCheckout Event (FIXED - No Currency)
     ReactPixel.track('InitiateCheckout', {
       content_ids: [orderItem.product_id],
       content_name: orderItem.product_name,
       content_type: 'product',
       value: totalAmount,
-      currency: 'USD',
       num_items: productQuantity
     })
 
@@ -290,13 +289,12 @@ const CheckoutPage = () => {
       const response = await api.post('/orders/create/', orderData)
       
       if (response.data.success) {
-        // Meta Pixel - Purchase Event
+        // ✅ Meta Pixel - Purchase Event (FIXED - No Currency)
         ReactPixel.track('Purchase', {
           content_ids: [orderItem.product_id],
           content_name: orderItem.product_name,
           content_type: 'product',
           value: totalAmount,
-          currency: 'PKR',
           num_items: productQuantity,
           transaction_id: response.data.order_id || response.data.order?.order_id
         })
