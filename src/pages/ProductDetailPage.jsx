@@ -17,6 +17,7 @@ import Loader from '../components/Loader'
 import ProductCard from '../components/ProductCard'
 import api from '../services/api'
 import toast from 'react-hot-toast'
+import ReactPixel from 'react-facebook-pixel'
 
 const ProductDetailPage = () => {
   const { slug } = useParams()
@@ -45,6 +46,16 @@ const ProductDetailPage = () => {
       if (res.data.variants && res.data.variants.length > 0) {
         setSelectedVariant(res.data.variants[0])
       }
+      
+      // Meta Pixel - ViewContent Event
+      ReactPixel.track('ViewContent', {
+        content_ids: [res.data.id || slug],
+        content_name: res.data.name,
+        content_category: res.data.category?.name || '',
+        content_type: 'product',
+        value: res.data.final_price || res.data.base_price,
+        currency: 'PKR'
+      })
       
       // Fetch related products (same category)
       if (res.data.category) {
@@ -84,6 +95,22 @@ const ProductDetailPage = () => {
       toast.error('Please select a variant')
       return
     }
+    
+    const currentPrice = selectedVariant?.price || product.final_price
+    
+    // Meta Pixel - AddToCart Event (Buy Now button)
+    ReactPixel.track('AddToCart', {
+      content_ids: [product.id],
+      content_name: product.name,
+      content_type: 'product',
+      value: currentPrice * quantity,
+      currency: 'PKR',
+      contents: [{
+        id: product.id,
+        quantity: quantity,
+        item_price: currentPrice
+      }]
+    })
     
     const orderData = {
       product_id: product.id,

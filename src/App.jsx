@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom'
 import { Toaster } from 'react-hot-toast'
 import { useEffect } from 'react'
+import ReactPixel from 'react-facebook-pixel' // ⬅️ Add this
 import Layout from './components/Layout/Layout'
 import HomePage from './pages/HomePage'
 import ShopPage from './pages/ShopPage'
@@ -12,23 +13,36 @@ import ContactPage from './pages/ContactPage'
 import AboutPage from './pages/AboutPage'
 import NotFoundPage from './pages/NotFoundPage'
 
+// ⬇️ Meta Pixel Initialization
+const PIXEL_ID = '1472228744582443'
+
+// Initialize pixel once
+ReactPixel.init(PIXEL_ID)
+
 // Scroll to Top Component - Fixed version
 function ScrollToTop() {
   const { pathname } = useLocation()
   
   useEffect(() => {
-    console.log('Scrolling to top for path:', pathname) // Debug log
+    console.log('Scrolling to top for path:', pathname)
     window.scrollTo({
       top: 0,
       left: 0,
-      behavior: 'instant' // Use 'smooth' for smooth scrolling
+      behavior: 'instant'
     })
-  }, [pathname]) // Runs on EVERY route change
+    // ⬇️ Track PageView on every route change
+    ReactPixel.pageView()
+  }, [pathname])
   
   return null
 }
 
 function App() {
+  // ⬇️ Track initial page load
+  useEffect(() => {
+    ReactPixel.pageView()
+  }, [])
+
   return (
     <>
       <Toaster 

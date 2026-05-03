@@ -18,6 +18,7 @@ import {
 } from '@heroicons/react/24/outline'
 import toast from 'react-hot-toast'
 import api from '../services/api'
+import ReactPixel from 'react-facebook-pixel'
 
 const CheckoutPage = () => {
   const navigate = useNavigate()
@@ -250,6 +251,17 @@ const CheckoutPage = () => {
     const productPrice = parseFloat(orderItem.price)
     const productQuantity = parseInt(orderItem.quantity)
     const deliveryCharges = parseFloat(productDeliveryCharges)
+    const totalAmount = productPrice * productQuantity + deliveryCharges
+
+    // Meta Pixel - InitiateCheckout Event
+    ReactPixel.track('InitiateCheckout', {
+      content_ids: [orderItem.product_id],
+      content_name: orderItem.product_name,
+      content_type: 'product',
+      value: totalAmount,
+      currency: 'PKR',
+      num_items: productQuantity
+    })
 
     const orderData = {
       customer_name: formData.customer_name,
@@ -278,6 +290,17 @@ const CheckoutPage = () => {
       const response = await api.post('/orders/create/', orderData)
       
       if (response.data.success) {
+        // Meta Pixel - Purchase Event
+        ReactPixel.track('Purchase', {
+          content_ids: [orderItem.product_id],
+          content_name: orderItem.product_name,
+          content_type: 'product',
+          value: totalAmount,
+          currency: 'PKR',
+          num_items: productQuantity,
+          transaction_id: response.data.order_id || response.data.order?.order_id
+        })
+        
         localStorage.removeItem('quickOrder')
         toast.success('Order placed successfully!')
         navigate(`/order-confirmation/${response.data.order_id}`)

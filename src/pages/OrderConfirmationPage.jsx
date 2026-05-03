@@ -9,6 +9,7 @@ import {
 } from '@heroicons/react/24/outline'
 import api from '../services/api'
 import toast from 'react-hot-toast'
+import ReactPixel from 'react-facebook-pixel'
 
 const OrderConfirmationPage = () => {
   const { orderId } = useParams()
@@ -24,6 +25,18 @@ const OrderConfirmationPage = () => {
     try {
       const response = await api.get(`/orders/${orderId}/`)
       setOrder(response.data)
+      
+      // Meta Pixel - Purchase Event (Backup/Deduplication)
+      if (response.data) {
+        ReactPixel.track('Purchase', {
+          content_ids: response.data.order_items?.map(item => item.product_id) || [],
+          content_type: 'product',
+          value: response.data.total_amount,
+          currency: 'PKR',
+          num_items: response.data.order_items?.reduce((sum, item) => sum + item.quantity, 0) || 0,
+          transaction_id: response.data.order_id || orderId
+        })
+      }
     } catch (error) {
       console.error('Error fetching order:', error)
       toast.error('Order not found')
