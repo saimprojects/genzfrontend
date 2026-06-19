@@ -3,11 +3,10 @@ import { Link, NavLink, useNavigate } from 'react-router-dom'
 import { 
   Bars3Icon, 
   XMarkIcon,
-  ShoppingBagIcon,
-  UserIcon,
   MagnifyingGlassIcon,
-  ChevronDownIcon
 } from '@heroicons/react/24/outline'
+
+const LOGO_URL = 'https://res.cloudinary.com/dxommxt6d/image/upload/v1781846810/2_nezeyp.png'
 
 const Navbar = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
@@ -16,11 +15,8 @@ const Navbar = () => {
   const [scrolled, setScrolled] = useState(false)
   const navigate = useNavigate()
 
-  // Handle scroll effect
   useEffect(() => {
-    const handleScroll = () => {
-      setScrolled(window.scrollY > 50)
-    }
+    const handleScroll = () => setScrolled(window.scrollY > 50)
     window.addEventListener('scroll', handleScroll)
     return () => window.removeEventListener('scroll', handleScroll)
   }, [])
@@ -45,16 +41,30 @@ const Navbar = () => {
   return (
     <>
       <nav className={`fixed top-0 w-full z-50 transition-all duration-300 ${
-        scrolled ? 'bg-white shadow-lg py-2' : 'bg-white/95 backdrop-blur-md py-4'
+        scrolled ? 'bg-white shadow-lg py-1' : 'bg-white/95 backdrop-blur-md py-2'
       }`}>
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between gap-4">
-            
+          <div className="flex items-center justify-between gap-4 h-14">
+
             {/* Logo */}
-            <Link to="/" className="flex-shrink-0">
-              <h1 className="text-xl md:text-2xl font-bold bg-gradient-to-r from-primary-600 to-primary-800 bg-clip-text text-transparent">
+            <Link to="/" className="flex-shrink-0 flex items-center">
+              <img
+                src={LOGO_URL}
+                alt="Primary Order"
+                className="h-10 w-10 object-contain rounded-lg"
+                onError={(e) => {
+                  e.target.style.display = 'none'
+                  e.target.nextSibling.style.display = 'block'
+                }}
+              />
+              <span
+                className="hidden text-xl font-bold bg-gradient-to-r from-primary-600 to-primary-800 bg-clip-text text-transparent ml-2"
+              >
                 Primary<span className="text-primary-600">Order</span>
-              </h1>
+              </span>
+              <span className="ml-2 text-lg font-bold text-gray-800 hidden sm:block">
+                Primary<span className="text-primary-600">Order</span>
+              </span>
             </Link>
 
             {/* Desktop Navigation Links */}
@@ -64,8 +74,8 @@ const Navbar = () => {
                   key={link.path}
                   to={link.path}
                   className={({ isActive }) =>
-                    `text-gray-700 hover:text-primary-600 transition-colors font-medium ${
-                      isActive ? 'text-primary-600 border-b-2 border-primary-600' : ''
+                    `text-gray-700 hover:text-primary-600 transition-colors font-medium text-sm ${
+                      isActive ? 'text-primary-600 border-b-2 border-primary-600 pb-0.5' : ''
                     }`
                   }
                 >
@@ -74,37 +84,35 @@ const Navbar = () => {
               ))}
             </div>
 
-            {/* Desktop Right Icons */}
+            {/* Desktop Search */}
             <div className="hidden lg:flex items-center gap-4">
-              {/* Search Bar */}
               <form onSubmit={handleSearch} className="relative">
                 <input
                   type="text"
                   placeholder="Search products..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-64 px-4 py-2 pr-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  className="w-56 px-4 py-2 pr-10 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                 />
                 <button type="submit" className="absolute right-3 top-1/2 -translate-y-1/2">
-                  <MagnifyingGlassIcon className="w-5 h-5 text-gray-400 hover:text-primary-600" />
+                  <MagnifyingGlassIcon className="w-4 h-4 text-gray-400 hover:text-primary-600" />
                 </button>
               </form>
             </div>
 
-            {/* Mobile Icons & Menu Button */}
-            <div className="flex items-center gap-3">
-              {/* Mobile Search Button */}
+            {/* Mobile Actions */}
+            <div className="flex items-center gap-2 lg:hidden">
               <button
                 onClick={() => setIsSearchOpen(true)}
-                className="lg:hidden p-2 rounded-lg hover:bg-gray-100"
+                className="p-2 rounded-lg hover:bg-gray-100 transition"
+                aria-label="Search"
               >
                 <MagnifyingGlassIcon className="w-5 h-5 text-gray-700" />
               </button>
-
-              {/* Mobile Menu Button */}
               <button
                 onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                className="lg:hidden p-2 rounded-lg hover:bg-gray-100"
+                className="p-2 rounded-lg hover:bg-gray-100 transition"
+                aria-label="Menu"
               >
                 {isMobileMenuOpen ? (
                   <XMarkIcon className="w-6 h-6 text-gray-700" />
@@ -122,15 +130,15 @@ const Navbar = () => {
             isMobileMenuOpen ? 'max-h-screen opacity-100 visible' : 'max-h-0 opacity-0 invisible'
           } overflow-hidden`}
         >
-          <div className="flex flex-col py-4">
+          <div className="flex flex-col py-2">
             {navLinks.map((link) => (
               <NavLink
                 key={link.path}
                 to={link.path}
                 onClick={() => setIsMobileMenuOpen(false)}
                 className={({ isActive }) =>
-                  `px-6 py-3 text-gray-700 hover:bg-gray-50 hover:text-primary-600 transition-colors ${
-                    isActive ? 'text-primary-600 bg-primary-50' : ''
+                  `px-6 py-3 text-gray-700 hover:bg-gray-50 hover:text-primary-600 transition-colors font-medium ${
+                    isActive ? 'text-primary-600 bg-primary-50 border-l-4 border-primary-600' : ''
                   }`
                 }
               >
@@ -144,7 +152,7 @@ const Navbar = () => {
       {/* Mobile Search Modal */}
       {isSearchOpen && (
         <div className="fixed inset-0 z-50 bg-black/50 flex items-start justify-center pt-20 px-4">
-          <div className="w-full max-w-md bg-white rounded-xl shadow-2xl overflow-hidden animate-slide-up">
+          <div className="w-full max-w-md bg-white rounded-xl shadow-2xl overflow-hidden">
             <div className="flex items-center justify-between p-4 border-b">
               <h3 className="font-semibold text-lg">Search Products</h3>
               <button
@@ -176,8 +184,8 @@ const Navbar = () => {
         </div>
       )}
 
-      {/* Spacer to push content below fixed navbar */}
-      <div className="h-16"></div>
+      {/* Spacer */}
+      <div className="h-14"></div>
     </>
   )
 }

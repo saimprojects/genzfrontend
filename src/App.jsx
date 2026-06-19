@@ -1,7 +1,7 @@
 import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom'
 import { Toaster } from 'react-hot-toast'
 import { useEffect } from 'react'
-import ReactPixel from 'react-facebook-pixel' // ⬅️ Add this
+import ReactPixel from 'react-facebook-pixel'
 import Layout from './components/Layout/Layout'
 import HomePage from './pages/HomePage'
 import ShopPage from './pages/ShopPage'
@@ -12,41 +12,32 @@ import TrackOrderPage from './pages/TrackOrderPage'
 import ContactPage from './pages/ContactPage'
 import AboutPage from './pages/AboutPage'
 import NotFoundPage from './pages/NotFoundPage'
+import WhatsAppButton from './components/Whatsappbutton'
 
-// ⬇️ Meta Pixel Initialization
+// Meta Pixel Initialization
 const PIXEL_ID = '1472228744582443'
-
-// Initialize pixel once
 ReactPixel.init(PIXEL_ID)
 
-// Scroll to Top Component - Fixed version
 function ScrollToTop() {
   const { pathname } = useLocation()
-  
+
   useEffect(() => {
-    console.log('Scrolling to top for path:', pathname)
-    window.scrollTo({
-      top: 0,
-      left: 0,
-      behavior: 'instant'
-    })
-    // ⬇️ Track PageView on every route change
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' })
     ReactPixel.pageView()
   }, [pathname])
-  
+
   return null
 }
 
 function App() {
-  // ⬇️ Track initial page load
   useEffect(() => {
     ReactPixel.pageView()
   }, [])
 
   return (
     <>
-      <Toaster 
-        position="top-center" 
+      <Toaster
+        position="top-center"
         reverseOrder={false}
         toastOptions={{
           duration: 4000,
@@ -57,17 +48,11 @@ function App() {
           },
           success: {
             duration: 3000,
-            iconTheme: {
-              primary: '#22c55e',
-              secondary: '#fff',
-            },
+            iconTheme: { primary: '#22c55e', secondary: '#fff' },
           },
           error: {
             duration: 4000,
-            iconTheme: {
-              primary: '#ef4444',
-              secondary: '#fff',
-            },
+            iconTheme: { primary: '#ef4444', secondary: '#fff' },
           },
         }}
       />
@@ -86,6 +71,9 @@ function App() {
             <Route path="*" element={<NotFoundPage />} />
           </Route>
         </Routes>
+
+        {/* Global WhatsApp Floating Button - renders on all pages */}
+        <WhatsAppButton />
       </BrowserRouter>
     </>
   )
