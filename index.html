@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <link rel="icon" href="%PUBLIC_URL%/favicon.ico" />
+    <link rel="icon" href="/favicon.ico" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#1e40af" />
     
@@ -96,14 +96,17 @@
       fbq('init', '1472228744582443');
       fbq('track', 'PageView');
     </script>
-    <noscript><img height="1" width="1" style="display:none"
-      src="https://www.facebook.com/tr?id=1472228744582443&ev=PageView&noscript=1"
-    /></noscript>
     <!-- ⬆️ End Meta Pixel Code ⬆️ -->
 
     <title>Primary Order - Premium Online Shopping in Pakistan | Fashion, Accessories & More</title>
   </head>
   <body>
+    <!-- ⬇️ Meta Pixel noscript — must be inside body, not head ⬇️ -->
+    <noscript><img height="1" width="1" style="display:none"
+      src="https://www.facebook.com/tr?id=1472228744582443&ev=PageView&noscript=1"
+    /></noscript>
+    <!-- ⬆️ End Meta Pixel noscript ⬆️ -->
+
     <noscript>You need to enable JavaScript to run Primary Order - Pakistan's Premium Online Store.</noscript>
     <div id="root"></div>
   </body>
