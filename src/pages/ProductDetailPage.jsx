@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import {
   StarIcon,
@@ -40,12 +40,45 @@ if (typeof document !== 'undefined' && !document.getElementById('pdp-kf')) {
       from { opacity: 0; transform: translateY(-6px); }
       to   { opacity: 1; transform: translateY(0); }
     }
+    @keyframes pdp-toast-in {
+      from { opacity: 0; transform: translateY(16px) scale(0.96); }
+      to   { opacity: 1; transform: translateY(0) scale(1); }
+    }
+    @keyframes pdp-toast-out {
+      from { opacity: 1; transform: translateY(0) scale(1); }
+      to   { opacity: 0; transform: translateY(16px) scale(0.96); }
+    }
+    @keyframes pdp-sticky-in {
+      from { transform: translateY(100%); }
+      to   { transform: translateY(0); }
+    }
+    @keyframes pdp-pulse-ring {
+      0%   { box-shadow: 0 0 0 0 rgba(239,68,68,0.45); }
+      100% { box-shadow: 0 0 0 8px rgba(239,68,68,0); }
+    }
     .pdp-savings-pop   { animation: pdp-savings-pop  0.45s ease forwards; }
     .pdp-badge-bounce  { animation: pdp-badge-bounce 0.6s ease 2; }
     .pdp-viewer-fade   { animation: pdp-viewer-fade  0.5s ease forwards; }
+    .pdp-toast-in      { animation: pdp-toast-in     0.35s ease forwards; }
+    .pdp-toast-out     { animation: pdp-toast-out    0.35s ease forwards; }
+    .pdp-sticky-in     { animation: pdp-sticky-in    0.3s ease forwards; }
+    .pdp-pulse-ring    { animation: pdp-pulse-ring   1.6s ease-out infinite; }
   `
   document.head.appendChild(s)
 }
+
+/* Rotating "recent purchase" social-proof toast — names/cities are illustrative,
+   not pulled from real order data. Keep this in mind if you ever want to wire
+   it up to real recent-orders instead. */
+const RECENT_BUYERS = [
+  { name: 'Ahmed',  city: 'Lahore' },
+  { name: 'Ayesha', city: 'Karachi' },
+  { name: 'Bilal',  city: 'Islamabad' },
+  { name: 'Sara',   city: 'Faisalabad' },
+  { name: 'Usman',  city: 'Rawalpindi' },
+  { name: 'Hina',   city: 'Multan' },
+  { name: 'Zain',   city: 'Sialkot' },
+]
 
 const ProductDetailPage = () => {
   const { slug }       = useParams()
@@ -62,6 +95,13 @@ const ProductDetailPage = () => {
   /* ── FOMO state ── */
   const [priceRevealed, setPriceRevealed] = useState(false)
   const [viewerCount]                     = useState(() => Math.floor(Math.random() * 16) + 12) // 12–27
+  const [soldToday]                       = useState(() => Math.floor(Math.random() * 41) + 20) // 20–60
+  const [countdown, setCountdown]         = useState('')
+  const [showStickyBar, setShowStickyBar] = useState(false)
+  const [notification, setNotification]   = useState(null)
+  const [notificationLeaving, setNotificationLeaving] = useState(false)
+
+  const buyBtnRef = useRef(null)
 
   useEffect(() => {
     window.scrollTo(0, 0)
@@ -75,6 +115,53 @@ const ProductDetailPage = () => {
     if (!product) return
     const t = setTimeout(() => setPriceRevealed(true), 1500)
     return () => clearTimeout(t)
+  }, [product])
+
+  /* Countdown to midnight — frames today's price as a ticking clock */
+  useEffect(() => {
+    const tick = () => {
+      const now      = new Date()
+      const midnight = new Date(now)
+      midnight.setHours(24, 0, 0, 0)
+      const diff = midnight - now
+      const h = String(Math.floor(diff / 3_600_000)).padStart(2, '0')
+      const m = String(Math.floor((diff % 3_600_000) / 60_000)).padStart(2, '0')
+      const s = String(Math.floor((diff % 60_000) / 1_000)).padStart(2, '0')
+      setCountdown(`${h}:${m}:${s}`)
+    }
+    tick()
+    const id = setInterval(tick, 1000)
+    return () => clearInterval(id)
+  }, [])
+
+  /* Show a sticky mobile buy bar once the main CTA scrolls out of view */
+  useEffect(() => {
+    if (!buyBtnRef.current) return
+    const obs = new IntersectionObserver(
+      ([entry]) => setShowStickyBar(!entry.isIntersecting),
+      { threshold: 0 }
+    )
+    obs.observe(buyBtnRef.current)
+    return () => obs.disconnect()
+  }, [product])
+
+  /* Rotating recent-purchase toast */
+  useEffect(() => {
+    if (!product) return
+    let i = 0
+    const showNext = () => {
+      const buyer   = RECENT_BUYERS[i % RECENT_BUYERS.length]
+      const minsAgo = Math.floor(Math.random() * 14) + 1
+      i++
+      setNotificationLeaving(false)
+      setNotification({ ...buyer, minsAgo })
+      const leaveTimer = setTimeout(() => setNotificationLeaving(true), 4200)
+      const hideTimer  = setTimeout(() => setNotification(null), 4600)
+      return () => { clearTimeout(leaveTimer); clearTimeout(hideTimer) }
+    }
+    const first    = setTimeout(showNext, 2500)
+    const interval = setInterval(showNext, 9000)
+    return () => { clearTimeout(first); clearInterval(interval) }
   }, [product])
 
   const fetchProduct = async () => {
@@ -154,12 +241,29 @@ const ProductDetailPage = () => {
   if (!product) return null
 
   const currentPrice  = selectedVariant?.price || product.final_price
-  const originalPrice = selectedVariant?.price || product.base_price
   const discount      = product.discount_percentage || 0
+
+  // FIX: originalPrice used to fall back to `selectedVariant?.price` too,
+  // which is the exact same value as currentPrice — so whenever a variant
+  // was selected, originalPrice === currentPrice and "You save Rs. 0!"
+  // showed up no matter what the real discount was. Now we derive the
+  // original price from the product's discount %, applied on top of
+  // whatever price is actually showing (variant or product-level).
+  const originalPrice = discount > 0
+    ? Math.round(currentPrice / (1 - discount / 100))
+    : (selectedVariant?.price || product.base_price)
+
   const inStock       = selectedVariant ? selectedVariant.stock_quantity > 0 : true
   const stockQty      = selectedVariant?.stock_quantity || product.stock || null
   const savings       = discount > 0 ? Math.round(originalPrice - currentPrice) : 0
   const isLowStock    = stockQty && stockQty <= 10
+
+  // Urgency progress bar — assumes a restock baseline of 50 units so the bar
+  // has something to visually drain against. Purely a UI device, not real data.
+  const stockBaseline = 50
+  const stockPercent  = stockQty
+    ? Math.min(100, Math.max(4, Math.round((stockQty / stockBaseline) * 100)))
+    : 100
 
   return (
     <div className="min-h-screen bg-gray-50 pb-12">
@@ -227,8 +331,8 @@ const ProductDetailPage = () => {
                 {product.name}
               </h1>
 
-              {/* Stars */}
-              <div className="flex items-center gap-2 mb-4">
+              {/* Stars + sold-today badge */}
+              <div className="flex items-center gap-2 mb-4 flex-wrap">
                 <div className="flex gap-0.5">
                   {[...Array(5)].map((_, i) => (
                     <StarSolidIcon key={i} className="w-4 h-4 text-yellow-400" />
@@ -236,10 +340,27 @@ const ProductDetailPage = () => {
                 </div>
                 <span className="text-sm font-semibold text-gray-700">4.8</span>
                 <span className="text-sm text-gray-400">(128 reviews)</span>
+                <span className="flex items-center gap-1 text-xs font-bold text-orange-600 bg-orange-50 border border-orange-200 px-2 py-0.5 rounded-full ml-1">
+                  <FireIcon className="w-3 h-3" />
+                  {soldToday} sold in last 24h
+                </span>
               </div>
 
               {/* ══ FOMO PRICE BLOCK ══ */}
               <div className="mb-5 p-4 bg-gray-50 rounded-2xl border border-gray-100">
+
+                {/* Countdown — deal "ends" at midnight */}
+                {discount > 0 && (
+                  <div className="flex items-center justify-between gap-2 mb-3 bg-red-50 border border-red-200 rounded-xl px-3 py-2">
+                    <span className="flex items-center gap-1.5 text-xs font-bold text-red-600">
+                      <ClockIcon className="w-3.5 h-3.5" />
+                      Today's price ends in
+                    </span>
+                    <span className="text-sm font-black text-red-600 tabular-nums tracking-wide">
+                      {countdown}
+                    </span>
+                  </div>
+                )}
 
                 {/* Viewer count — fades in on load */}
                 <div className="pdp-viewer-fade flex items-center gap-1.5 mb-3">
@@ -301,7 +422,7 @@ const ProductDetailPage = () => {
                     </div>
 
                     {/* Savings callout — pops in */}
-                    {priceRevealed && (
+                    {priceRevealed && savings > 0 && (
                       <div className="pdp-savings-pop flex items-center justify-between bg-green-50 border border-green-200 rounded-xl px-4 py-2.5">
                         <span className="text-sm font-bold text-green-700">
                           💰 You save Rs. {savings.toLocaleString()}!
@@ -323,20 +444,31 @@ const ProductDetailPage = () => {
               {/* Stock status */}
               <div className="mb-4">
                 {inStock ? (
-                  <div className="flex items-center gap-3 flex-wrap">
-                    <p className="text-green-600 text-sm flex items-center gap-1 font-medium">
-                      <CheckIcon className="w-4 h-4" />
-                      In Stock
-                      {stockQty && <span className="text-gray-500 font-normal">({stockQty} available)</span>}
-                    </p>
-                    {/* Low stock urgency */}
+                  <>
+                    <div className="flex items-center gap-3 flex-wrap mb-2">
+                      <p className="text-green-600 text-sm flex items-center gap-1 font-medium">
+                        <CheckIcon className="w-4 h-4" />
+                        In Stock
+                        {stockQty && <span className="text-gray-500 font-normal">({stockQty} available)</span>}
+                      </p>
+                      {/* Low stock urgency */}
+                      {isLowStock && (
+                        <span className="flex items-center gap-1 text-xs font-bold text-orange-600 bg-orange-50 border border-orange-200 px-2.5 py-1 rounded-full">
+                          <BoltIcon className="w-3 h-3" />
+                          Only {stockQty} left!
+                        </span>
+                      )}
+                    </div>
+                    {/* Stock urgency progress bar */}
                     {isLowStock && (
-                      <span className="flex items-center gap-1 text-xs font-bold text-orange-600 bg-orange-50 border border-orange-200 px-2.5 py-1 rounded-full">
-                        <BoltIcon className="w-3 h-3" />
-                        Only {stockQty} left!
-                      </span>
+                      <div className="w-full h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-gradient-to-r from-orange-400 to-red-500 rounded-full transition-all duration-700"
+                          style={{ width: `${stockPercent}%` }}
+                        />
+                      </div>
                     )}
-                  </div>
+                  </>
                 ) : (
                   <p className="text-red-600 text-sm font-semibold">Out of Stock</p>
                 )}
@@ -412,18 +544,20 @@ const ProductDetailPage = () => {
               </div>
 
               {/* Buy Now CTA */}
-              <button
-                onClick={handleBuyNow}
-                disabled={!inStock}
-                className={`w-full py-4 rounded-2xl font-bold text-base flex items-center justify-center gap-2 transition-all shadow-lg ${
-                  inStock
-                    ? 'bg-primary-600 hover:bg-primary-700 text-white shadow-primary-200 hover:shadow-primary-300 active:scale-95'
-                    : 'bg-gray-300 text-gray-500 cursor-not-allowed shadow-none'
-                }`}
-              >
-                <ShoppingBagIcon className="w-5 h-5" />
-                {inStock ? 'Buy Now — Order Today!' : 'Out of Stock'}
-              </button>
+              <div ref={buyBtnRef}>
+                <button
+                  onClick={handleBuyNow}
+                  disabled={!inStock}
+                  className={`w-full py-4 rounded-2xl font-bold text-base flex items-center justify-center gap-2 transition-all shadow-lg ${
+                    inStock
+                      ? 'bg-primary-600 hover:bg-primary-700 text-white shadow-primary-200 hover:shadow-primary-300 active:scale-95 pdp-pulse-ring'
+                      : 'bg-gray-300 text-gray-500 cursor-not-allowed shadow-none'
+                  }`}
+                >
+                  <ShoppingBagIcon className="w-5 h-5" />
+                  {inStock ? 'Buy Now — Order Today!' : 'Out of Stock'}
+                </button>
+              </div>
 
               {/* Limited time note below button */}
               {inStock && discount > 0 && (
@@ -531,6 +665,55 @@ const ProductDetailPage = () => {
           </div>
         )}
       </div>
+
+      {/* ── Recent-purchase social-proof toast ── */}
+      {notification && (
+        <div
+          className={`fixed bottom-4 left-4 z-40 max-w-[280px] bg-white rounded-2xl shadow-xl border border-gray-100 p-3 flex items-center gap-3 ${
+            notificationLeaving ? 'pdp-toast-out' : 'pdp-toast-in'
+          }`}
+        >
+          <div className="w-9 h-9 rounded-full bg-primary-50 flex items-center justify-center flex-shrink-0">
+            <ShoppingBagIcon className="w-4 h-4 text-primary-600" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-xs font-bold text-gray-800 truncate">
+              {notification.name} from {notification.city}
+            </p>
+            <p className="text-[11px] text-gray-500">
+              just bought this · {notification.minsAgo} min ago
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* ── Sticky mobile buy bar ── */}
+      {showStickyBar && (
+        <div className="pdp-sticky-in fixed bottom-0 left-0 right-0 z-40 lg:hidden bg-white border-t shadow-[0_-4px_16px_rgba(0,0,0,0.08)] px-4 py-3 flex items-center gap-3">
+          <div className="min-w-0">
+            <p className="text-[11px] text-gray-400 leading-none mb-1">
+              {discount > 0 && (
+                <span className="line-through mr-1">Rs. {originalPrice?.toLocaleString()}</span>
+              )}
+            </p>
+            <p className="text-base font-black text-gray-800 leading-none">
+              Rs. {currentPrice?.toLocaleString()}
+            </p>
+          </div>
+          <button
+            onClick={handleBuyNow}
+            disabled={!inStock}
+            className={`flex-1 py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all ${
+              inStock
+                ? 'bg-primary-600 hover:bg-primary-700 text-white active:scale-95'
+                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+            }`}
+          >
+            <ShoppingBagIcon className="w-4 h-4" />
+            {inStock ? 'Buy Now' : 'Out of Stock'}
+          </button>
+        </div>
+      )}
     </div>
   )
 }
