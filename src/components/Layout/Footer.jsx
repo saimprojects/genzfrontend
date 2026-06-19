@@ -15,7 +15,6 @@ const Footer = () => {
     { name: 'About Us', path: '/about' },
     { name: 'Contact Us', path: '/contact' },
     { name: 'Track Order', path: '/track-order' },
-    { name: 'FAQs', path: '/faqs' },
   ]
 
   const policyLinks = [
@@ -26,14 +25,12 @@ const Footer = () => {
   ]
 
   const categories = [
-    { name: 'Clothing', path: '/shop?category=clothing' },
-    { name: 'Footwear', path: '/shop?category=footwear' },
-    { name: 'Electronics', path: '/shop?category=electronics' },
-    { name: 'Accessories', path: '/shop?category=accessories' },
+    { name: 'Mobile Products', path: '/shop' },
+    { name: 'PC Products', path: '/shop' },
   ]
 
   const contactInfo = [
-    { icon: MapPinIcon, content: '123 Main Street, Gulberg, Lahore, Pakistan', href: null },
+    { icon: MapPinIcon, content: 'Sethi Colony, Kasur, Punjab,Pakistan', href: null },
     { icon: PhoneIcon, content: '+92 313 1471263', href: 'tel:+923131471263' },
     { icon: PhoneIcon, content: '+92 324 4689147', href: 'tel:+923244689147' },
     { icon: EnvelopeIcon, content: 'saimpkf@gmail.com', href: 'mailto:saimpkf@gmail.com' },

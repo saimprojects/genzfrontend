@@ -12,7 +12,11 @@ import TrackOrderPage from './pages/TrackOrderPage'
 import ContactPage from './pages/ContactPage'
 import AboutPage from './pages/AboutPage'
 import NotFoundPage from './pages/NotFoundPage'
-import WhatsAppButton from './components/Whatsappbutton'
+import WhatsAppButton from './components/WhatsAppButton'
+import PrivacyPolicyPage from './pages/PrivacyPolicyPage'
+import TermsPage from './pages/TermsPage'
+import RefundPolicyPage from './pages/RefundPolicyPage'
+import ShippingPolicyPage from './pages/ShippingPolicyPage'
 
 // Meta Pixel Initialization
 const PIXEL_ID = '1472228744582443'
@@ -22,7 +26,12 @@ function ScrollToTop() {
   const { pathname } = useLocation()
 
   useEffect(() => {
-    window.scrollTo({ top: 0, left: 0, behavior: 'instant' })
+    // Multiple methods for maximum browser compatibility
+    document.documentElement.scrollTop = 0
+    document.body.scrollTop = 0
+    window.scrollTo(0, 0)
+
+    // Track PageView on every route change
     ReactPixel.pageView()
   }, [pathname])
 
@@ -68,11 +77,16 @@ function App() {
             <Route path="track-order" element={<TrackOrderPage />} />
             <Route path="contact" element={<ContactPage />} />
             <Route path="about" element={<AboutPage />} />
+            {/* Policy Pages */}
+            <Route path="privacy" element={<PrivacyPolicyPage />} />
+            <Route path="terms" element={<TermsPage />} />
+            <Route path="refund-policy" element={<RefundPolicyPage />} />
+            <Route path="shipping-policy" element={<ShippingPolicyPage />} />
             <Route path="*" element={<NotFoundPage />} />
           </Route>
         </Routes>
 
-        {/* Global WhatsApp Floating Button - renders on all pages */}
+        {/* Global WhatsApp Floating Button */}
         <WhatsAppButton />
       </BrowserRouter>
     </>
