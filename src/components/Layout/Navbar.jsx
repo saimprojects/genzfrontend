@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Link, NavLink, useNavigate } from 'react-router-dom'
+import { Link, NavLink, useNavigate, useLocation } from 'react-router-dom'
 import { 
   Bars3Icon, 
   XMarkIcon,
@@ -14,12 +14,18 @@ const Navbar = () => {
   const [searchQuery, setSearchQuery] = useState('')
   const [scrolled, setScrolled] = useState(false)
   const navigate = useNavigate()
+  const location = useLocation()
+
+  const isHome = location.pathname === '/'
+  // Transparent only on the home page, only before scrolling (i.e. while sitting on the banner)
+  const transparent = isHome && !scrolled
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 50)
     window.addEventListener('scroll', handleScroll)
+    handleScroll() // re-check on route change in case page loads mid-scroll
     return () => window.removeEventListener('scroll', handleScroll)
-  }, [])
+  }, [location.pathname])
 
   const handleSearch = (e) => {
     e.preventDefault()
@@ -41,7 +47,11 @@ const Navbar = () => {
   return (
     <>
       <nav className={`fixed top-0 w-full z-50 transition-all duration-300 ${
-        scrolled ? 'bg-white shadow-lg py-1' : 'bg-white/95 backdrop-blur-md py-2'
+        transparent
+          ? 'bg-transparent py-3'
+          : scrolled
+          ? 'bg-white shadow-lg py-1'
+          : 'bg-white/95 backdrop-blur-md py-2'
       }`}>
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between gap-4 h-14">
@@ -62,8 +72,10 @@ const Navbar = () => {
               >
                 Primary<span className="text-primary-600">Order</span>
               </span>
-              <span className="ml-2 text-lg font-bold text-gray-800 hidden sm:block">
-                Primary<span className="text-primary-600">Order</span>
+              <span className={`ml-2 text-lg font-bold hidden sm:block transition-colors duration-300 ${
+                transparent ? 'text-white' : 'text-gray-800'
+              }`}>
+                Primary<span className={transparent ? 'text-blue-300' : 'text-primary-600'}>Order</span>
               </span>
             </Link>
 
@@ -74,8 +86,10 @@ const Navbar = () => {
                   key={link.path}
                   to={link.path}
                   className={({ isActive }) =>
-                    `text-gray-700 hover:text-primary-600 transition-colors font-medium text-sm ${
-                      isActive ? 'text-primary-600 border-b-2 border-primary-600 pb-0.5' : ''
+                    `transition-colors font-medium text-sm pb-0.5 ${
+                      transparent
+                        ? `text-white hover:text-blue-200 ${isActive ? 'border-b-2 border-white' : ''}`
+                        : `text-gray-700 hover:text-primary-600 ${isActive ? 'text-primary-600 border-b-2 border-primary-600' : ''}`
                     }`
                   }
                 >
@@ -92,10 +106,14 @@ const Navbar = () => {
                   placeholder="Search products..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-56 px-4 py-2 pr-10 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  className={`w-56 px-4 py-2 pr-10 rounded-lg text-sm border focus:outline-none focus:ring-2 transition-colors duration-300 ${
+                    transparent
+                      ? 'bg-white/10 border-white/30 text-white placeholder-white/70 backdrop-blur-sm focus:ring-white/50'
+                      : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:ring-primary-500 focus:border-transparent'
+                  }`}
                 />
                 <button type="submit" className="absolute right-3 top-1/2 -translate-y-1/2">
-                  <MagnifyingGlassIcon className="w-4 h-4 text-gray-400 hover:text-primary-600" />
+                  <MagnifyingGlassIcon className={`w-4 h-4 ${transparent ? 'text-white/80 hover:text-white' : 'text-gray-400 hover:text-primary-600'}`} />
                 </button>
               </form>
             </div>
@@ -104,27 +122,27 @@ const Navbar = () => {
             <div className="flex items-center gap-2 lg:hidden">
               <button
                 onClick={() => setIsSearchOpen(true)}
-                className="p-2 rounded-lg hover:bg-gray-100 transition"
+                className={`p-2 rounded-lg transition ${transparent ? 'hover:bg-white/10' : 'hover:bg-gray-100'}`}
                 aria-label="Search"
               >
-                <MagnifyingGlassIcon className="w-5 h-5 text-gray-700" />
+                <MagnifyingGlassIcon className={`w-5 h-5 ${transparent ? 'text-white' : 'text-gray-700'}`} />
               </button>
               <button
                 onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                className="p-2 rounded-lg hover:bg-gray-100 transition"
+                className={`p-2 rounded-lg transition ${transparent ? 'hover:bg-white/10' : 'hover:bg-gray-100'}`}
                 aria-label="Menu"
               >
                 {isMobileMenuOpen ? (
-                  <XMarkIcon className="w-6 h-6 text-gray-700" />
+                  <XMarkIcon className={`w-6 h-6 ${transparent ? 'text-white' : 'text-gray-700'}`} />
                 ) : (
-                  <Bars3Icon className="w-6 h-6 text-gray-700" />
+                  <Bars3Icon className={`w-6 h-6 ${transparent ? 'text-white' : 'text-gray-700'}`} />
                 )}
               </button>
             </div>
           </div>
         </div>
 
-        {/* Mobile Menu */}
+        {/* Mobile Menu (always solid white when open, regardless of transparent state, for readability) */}
         <div
           className={`lg:hidden fixed top-[57px] left-0 w-full bg-white shadow-lg transition-all duration-300 ease-in-out z-40 ${
             isMobileMenuOpen ? 'max-h-screen opacity-100 visible' : 'max-h-0 opacity-0 invisible'
@@ -184,8 +202,8 @@ const Navbar = () => {
         </div>
       )}
 
-      {/* Spacer */}
-      <div className="h-14"></div>
+      {/* Spacer: only needed on non-home pages, since home's banner sits full-bleed under the transparent navbar */}
+      {!isHome && <div className="h-14"></div>}
     </>
   )
 }

@@ -47,28 +47,16 @@ const AboutPage = () => {
 
   const teamMembers = [
     {
-      name: 'Ahmed Raza',
-      role: 'Founder & CEO',
+      name: 'Muhammad Usman',
+      role: 'Founder & Management',
       image: null,
-      bio: '10+ years of experience in ecommerce industry'
+      bio: 'Leading the vision, strategy, and overall operations of Primary Order'
     },
     {
-      name: 'Sara Khan',
-      role: 'Operations Manager',
+      name: 'Muhammad Saim',
+      role: 'Co-Founder & Technical Lead',
       image: null,
-      bio: 'Ensuring smooth deliveries and customer satisfaction'
-    },
-    {
-      name: 'Usman Ali',
-      role: 'Head of Products',
-      image: null,
-      bio: 'Curating the best products for our customers'
-    },
-    {
-      name: 'Fatima Zafar',
-      role: 'Customer Support',
-      image: null,
-      bio: 'Always ready to assist our valued customers'
+      bio: 'Building and maintaining the technology that powers Primary Order'
     },
   ]
 
@@ -212,7 +200,7 @@ const AboutPage = () => {
           </p>
         </div>
         
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 max-w-2xl mx-auto">
           {teamMembers.map((member, idx) => (
             <div key={idx} className="bg-white rounded-xl shadow-sm p-6 text-center hover:shadow-md transition">
               <div className="w-24 h-24 bg-gradient-to-br from-primary-100 to-primary-200 rounded-full flex items-center justify-center mx-auto mb-4">
