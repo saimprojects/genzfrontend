@@ -14,6 +14,8 @@ import {
   FireIcon,
   ClockIcon,
   BoltIcon,
+  XMarkIcon,
+  ChatBubbleLeftRightIcon,
 } from '@heroicons/react/24/outline'
 import { StarIcon as StarSolidIcon } from '@heroicons/react/24/solid'
 import Loader from '../components/Loader'
@@ -80,6 +82,29 @@ const RECENT_BUYERS = [
   { name: 'Zain',   city: 'Sialkot' },
 ]
 
+// WhatsApp number for "Order on WhatsApp" — keep digits only, country code first, no + or spaces
+const WHATSAPP_NUMBER = '923244689147'
+
+// Text for the order-options modal (shown after language is picked)
+const MODAL_TEXT = {
+  en: {
+    howToOrder: 'How would you like to order?',
+    instantOrder: 'Instant Order',
+    instantOrderDesc: 'Checkout instantly on our website',
+    orderWhatsapp: 'Order on WhatsApp',
+    orderWhatsappDesc: 'Chat with us to place your order directly',
+    changeLanguage: '← Change language',
+  },
+  ur: {
+    howToOrder: 'آپ آرڈر کیسے کرنا چاہتے ہیں؟',
+    instantOrder: 'فوری آرڈر',
+    instantOrderDesc: 'ہماری ویب سائٹ پر فوری چیک آؤٹ کریں',
+    orderWhatsapp: 'واٹس ایپ پر آرڈر کریں',
+    orderWhatsappDesc: 'براہ راست آرڈر دینے کے لیے ہم سے چیٹ کریں',
+    changeLanguage: '→ زبان تبدیل کریں',
+  }
+}
+
 const ProductDetailPage = () => {
   const { slug }       = useParams()
   const navigate       = useNavigate()
@@ -100,6 +125,11 @@ const ProductDetailPage = () => {
   const [showStickyBar, setShowStickyBar] = useState(false)
   const [notification, setNotification]   = useState(null)
   const [notificationLeaving, setNotificationLeaving] = useState(false)
+
+  /* ── Order flow state: language → instant order / whatsapp order ── */
+  const [showLanguageModal, setShowLanguageModal] = useState(false)
+  const [showOrderModal, setShowOrderModal]       = useState(false)
+  const [selectedLanguage, setSelectedLanguage]   = useState('en')
 
   const buyBtnRef = useRef(null)
 
@@ -208,11 +238,25 @@ const ProductDetailPage = () => {
       setQuantity(prev => prev - 1)
   }
 
-  const handleBuyNow = () => {
+  /* Step 1: clicking the main CTA opens the language picker (after variant check) */
+  const handleOrderNowClick = () => {
     if (!selectedVariant && product?.variants?.length > 0) {
       toast.error('Please select a variant')
       return
     }
+    setShowLanguageModal(true)
+  }
+
+  /* Step 2: language picked → show Instant Order / WhatsApp Order options */
+  const handleLanguageSelect = (lang) => {
+    setSelectedLanguage(lang)
+    setShowLanguageModal(false)
+    setShowOrderModal(true)
+  }
+
+  /* Option A: Instant Order — same as the old "Buy Now" flow, goes to checkout
+     in the language the customer picked */
+  const proceedInstantOrder = () => {
     const currentPrice = selectedVariant?.price || product.final_price
     ReactPixel.track('AddToCart', {
       content_ids:  [product.id],
@@ -234,7 +278,41 @@ const ProductDetailPage = () => {
       price: currentPrice,
       image: product.thumbnail_url || product.primary_image,
     }))
+    localStorage.setItem('checkoutLanguage', selectedLanguage)
+    setShowOrderModal(false)
     navigate('/checkout')
+  }
+
+  /* Option B: Order on WhatsApp — sends product details as a pre-filled message */
+  const orderOnWhatsApp = () => {
+    const currentPrice = selectedVariant?.price || product.final_price
+    const total = currentPrice * quantity
+    const variantText = selectedVariant
+      ? `${selectedVariant.size || ''} ${selectedVariant.color || ''}`.trim()
+      : ''
+    const productUrl = window.location.href
+
+    const message = selectedLanguage === 'ur'
+      ? `السلام علیکم! میں یہ پروڈکٹ آرڈر کرنا چاہتا/چاہتی ہوں:\n\n` +
+        `پروڈکٹ: ${product.name}\n` +
+        (variantText ? `ورائنٹ: ${variantText}\n` : '') +
+        `مقدار: ${quantity}\n` +
+        `قیمت: Rs. ${currentPrice?.toLocaleString()}\n` +
+        `کل رقم: Rs. ${total?.toLocaleString()}\n\n` +
+        `پروڈکٹ لنک: ${productUrl}\n\n` +
+        `براہ کرم میرا آرڈر کنفرم کریں۔`
+      : `Hello! I want to order this product:\n\n` +
+        `Product: ${product.name}\n` +
+        (variantText ? `Variant: ${variantText}\n` : '') +
+        `Quantity: ${quantity}\n` +
+        `Price: Rs. ${currentPrice?.toLocaleString()}\n` +
+        `Total: Rs. ${total?.toLocaleString()}\n\n` +
+        `Product Link: ${productUrl}\n\n` +
+        `Please confirm my order.`
+
+    const whatsappUrl = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`
+    window.open(whatsappUrl, '_blank')
+    setShowOrderModal(false)
   }
 
   if (loading) return <Loader />
@@ -546,7 +624,7 @@ const ProductDetailPage = () => {
               {/* Buy Now CTA */}
               <div ref={buyBtnRef}>
                 <button
-                  onClick={handleBuyNow}
+                  onClick={handleOrderNowClick}
                   disabled={!inStock}
                   className={`w-full py-4 rounded-2xl font-bold text-base flex items-center justify-center gap-2 transition-all shadow-lg ${
                     inStock
@@ -701,7 +779,7 @@ const ProductDetailPage = () => {
             </p>
           </div>
           <button
-            onClick={handleBuyNow}
+            onClick={handleOrderNowClick}
             disabled={!inStock}
             className={`flex-1 py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all ${
               inStock
@@ -712,6 +790,90 @@ const ProductDetailPage = () => {
             <ShoppingBagIcon className="w-4 h-4" />
             {inStock ? 'Buy Now' : 'Out of Stock'}
           </button>
+        </div>
+      )}
+
+      {/* ── Step 1: Language selection modal ── */}
+      {showLanguageModal && (
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center px-4">
+          <div className="w-full max-w-sm bg-white rounded-2xl shadow-2xl p-6 text-center relative">
+            <button
+              onClick={() => setShowLanguageModal(false)}
+              className="absolute top-3 right-3 p-1.5 rounded-lg hover:bg-gray-100"
+              aria-label="Close"
+            >
+              <XMarkIcon className="w-5 h-5 text-gray-400" />
+            </button>
+            <h3 className="text-lg font-bold text-gray-800 mb-1 mt-2">Choose Your Language</h3>
+            <p className="text-sm text-gray-500 mb-6">اپنی زبان منتخب کریں</p>
+            <div className="flex flex-col gap-3">
+              <button
+                onClick={() => handleLanguageSelect('ur')}
+                className="w-full py-3.5 rounded-xl border-2 border-gray-200 hover:border-primary-600 hover:bg-primary-50 transition font-semibold text-gray-800"
+              >
+                اردو (Urdu)
+              </button>
+              <button
+                onClick={() => handleLanguageSelect('en')}
+                className="w-full py-3.5 rounded-xl border-2 border-gray-200 hover:border-primary-600 hover:bg-primary-50 transition font-semibold text-gray-800"
+              >
+                English
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Step 2: Instant Order vs WhatsApp Order modal (shown in the picked language) ── */}
+      {showOrderModal && (
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center px-4">
+          <div
+            dir={selectedLanguage === 'ur' ? 'rtl' : 'ltr'}
+            className="w-full max-w-sm bg-white rounded-2xl shadow-2xl p-6 relative"
+          >
+            <button
+              onClick={() => setShowOrderModal(false)}
+              className="absolute top-3 right-3 p-1.5 rounded-lg hover:bg-gray-100"
+              aria-label="Close"
+            >
+              <XMarkIcon className="w-5 h-5 text-gray-400" />
+            </button>
+            <h3 className="text-lg font-bold text-gray-800 mb-5 text-center mt-2">
+              {MODAL_TEXT[selectedLanguage].howToOrder}
+            </h3>
+            <div className="flex flex-col gap-3">
+              <div>
+                <button
+                  onClick={proceedInstantOrder}
+                  className="w-full py-4 rounded-xl bg-primary-600 hover:bg-primary-700 text-white font-bold flex items-center justify-center gap-2 transition"
+                >
+                  <BoltIcon className="w-5 h-5" />
+                  {MODAL_TEXT[selectedLanguage].instantOrder}
+                </button>
+                <p className="text-xs text-gray-400 text-center mt-1.5">
+                  {MODAL_TEXT[selectedLanguage].instantOrderDesc}
+                </p>
+              </div>
+              <div>
+                <button
+                  onClick={orderOnWhatsApp}
+                  className="w-full py-4 rounded-xl bg-green-500 hover:bg-green-600 text-white font-bold flex items-center justify-center gap-2 transition"
+                >
+                  <ChatBubbleLeftRightIcon className="w-5 h-5" />
+                  {MODAL_TEXT[selectedLanguage].orderWhatsapp}
+                </button>
+                <p className="text-xs text-gray-400 text-center mt-1.5">
+                  {MODAL_TEXT[selectedLanguage].orderWhatsappDesc}
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => { setShowOrderModal(false); setShowLanguageModal(true) }}
+              className="mt-5 text-sm text-gray-400 hover:text-gray-600 w-full text-center"
+            >
+              {MODAL_TEXT[selectedLanguage].changeLanguage}
+            </button>
+          </div>
         </div>
       )}
     </div>

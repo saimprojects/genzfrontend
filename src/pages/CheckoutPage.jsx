@@ -7,7 +7,6 @@ import {
   CheckCircleIcon,
   MapPinIcon,
   PhoneIcon,
-  EnvelopeIcon,
   UserIcon,
   BuildingOfficeIcon,
   HomeIcon,
@@ -20,15 +19,196 @@ import toast from 'react-hot-toast'
 import api from '../services/api'
 import ReactPixel from 'react-facebook-pixel'
 
+// ───── Static UI text, English + Urdu ─────
+const TEXT = {
+  en: {
+    backToShop: 'Back to Shop',
+    checkout: 'Checkout',
+    stepOf: (a, b) => `Step ${a} of ${b}`,
+    optional: 'Optional',
+    back: 'Back',
+    next: 'Next',
+    placeOrder: 'Place Order',
+    processing: 'Processing...',
+    pressEnter: 'Press Enter to go next',
+    orderSummary: 'Order Summary',
+    qty: 'Qty',
+    subtotal: 'Subtotal',
+    deliveryCharges: 'Delivery Charges',
+    freeShipping: 'Free Shipping',
+    totalAmount: 'Total Amount',
+    codNote: '*Cash on Delivery only',
+    freeShippingBanner: '✨ Free Shipping on this product!',
+    deliveryBanner: (amt) => `Delivery charges: Rs. ${amt}`,
+    secureCheckout: 'Secure & encrypted checkout',
+    loading: 'Loading...',
+    noItemToast: 'No item to checkout',
+    invalidField: (label) => `Please enter valid ${label.toLowerCase()}`,
+    orderSuccess: 'Order placed successfully!',
+    orderFail: 'Failed to place order',
+    genericError: 'Something went wrong. Please try again.',
+    noItemOrder: 'No item to order',
+  },
+  ur: {
+    backToShop: 'شاپ پر واپس جائیں',
+    checkout: 'چیک آؤٹ',
+    stepOf: (a, b) => `مرحلہ ${a} از ${b}`,
+    optional: 'اختیاری',
+    back: 'پیچھے',
+    next: 'اگلا',
+    placeOrder: 'آرڈر دیں',
+    processing: 'پروسیسنگ...',
+    pressEnter: 'اگلے مرحلے کے لیے Enter دبائیں',
+    orderSummary: 'آرڈر کا خلاصہ',
+    qty: 'مقدار',
+    subtotal: 'ذیلی رقم',
+    deliveryCharges: 'ڈلیوری چارجز',
+    freeShipping: 'مفت ڈلیوری',
+    totalAmount: 'کل رقم',
+    codNote: '*صرف کیش آن ڈیلیوری',
+    freeShippingBanner: '✨ اس پروڈکٹ پر مفت ڈلیوری!',
+    deliveryBanner: (amt) => `ڈلیوری چارجز: Rs. ${amt}`,
+    secureCheckout: 'محفوظ اور خفیہ کردہ چیک آؤٹ',
+    loading: 'لوڈ ہو رہا ہے...',
+    noItemToast: 'چیک آؤٹ کے لیے کوئی پروڈکٹ نہیں',
+    invalidField: (label) => `براہ کرم درست ${label} درج کریں`,
+    orderSuccess: 'آرڈر کامیابی سے دے دیا گیا!',
+    orderFail: 'آرڈر دینے میں ناکامی ہوئی',
+    genericError: 'کچھ غلط ہو گیا۔ براہ کرم دوبارہ کوشش کریں۔',
+    noItemOrder: 'آرڈر کے لیے کوئی پروڈکٹ نہیں',
+  }
+}
+
+const PROVINCES = {
+  en: [
+    { value: 'punjab', label: 'Punjab' },
+    { value: 'sindh', label: 'Sindh' },
+    { value: 'kpk', label: 'Khyber Pakhtunkhwa' },
+    { value: 'balochistan', label: 'Balochistan' },
+    { value: 'gilgit', label: 'Gilgit-Baltistan' },
+    { value: 'kashmir', label: 'Azad Kashmir' },
+    { value: 'islamabad', label: 'Islamabad' },
+  ],
+  ur: [
+    { value: 'punjab', label: 'پنجاب' },
+    { value: 'sindh', label: 'سندھ' },
+    { value: 'kpk', label: 'خیبر پختونخواہ' },
+    { value: 'balochistan', label: 'بلوچستان' },
+    { value: 'gilgit', label: 'گلگت بلتستان' },
+    { value: 'kashmir', label: 'آزاد کشمیر' },
+    { value: 'islamabad', label: 'اسلام آباد' },
+  ]
+}
+
+// Email step removed entirely — only name, phone, and address steps remain
+const getFormSteps = (language, provinces) => ([
+  {
+    title: language === 'ur' ? 'پورا نام' : 'Full Name',
+    description: language === 'ur' ? 'ہم آپ کو کیا کہہ کر بلائیں؟' : "What should we call you?",
+    icon: UserIcon,
+    field: 'customer_name',
+    type: 'text',
+    placeholder: language === 'ur' ? 'مثلاً محمد علی' : 'e.g., Muhammad Ali',
+    required: true,
+    validate: (value) => value.trim().length >= 2
+  },
+  {
+    title: language === 'ur' ? 'فون نمبر' : 'Phone Number',
+    description: language === 'ur' ? 'ڈلیوری اپڈیٹس اور ٹریکنگ کے لیے' : 'For delivery updates & tracking',
+    icon: PhoneIcon,
+    field: 'customer_phone',
+    type: 'tel',
+    placeholder: '03XXXXXXXXX',
+    required: true,
+    validate: (value) => value.trim().length >= 10
+  },
+  {
+    title: language === 'ur' ? 'صوبہ' : 'Province',
+    description: language === 'ur' ? 'اپنا صوبہ منتخب کریں' : 'Select your province',
+    icon: MapPinIcon,
+    field: 'province',
+    type: 'select',
+    options: provinces,
+    required: true,
+    validate: (value) => value !== ''
+  },
+  {
+    title: language === 'ur' ? 'شہر' : 'City',
+    description: language === 'ur' ? 'اپنے شہر کا نام درج کریں' : 'Enter your city name',
+    icon: MapPinIcon,
+    field: 'city',
+    type: 'text',
+    placeholder: language === 'ur' ? 'مثلاً لاہور، کراچی' : 'e.g., Lahore, Karachi',
+    required: true,
+    validate: (value) => value.trim().length >= 2
+  },
+  {
+    title: language === 'ur' ? 'مرکزی پتہ کا علاقہ' : 'Main Address Area',
+    description: language === 'ur' ? 'سیکٹر، کالونی، یا علاقے کا نام' : 'Sector, Colony, or Area Name',
+    icon: BuildingOfficeIcon,
+    field: 'main_address',
+    type: 'text',
+    placeholder: language === 'ur' ? 'مثلاً گلبرگ III، ڈی ایچ اے فیز 5' : 'e.g., Gulberg III, DHA Phase 5',
+    required: true,
+    validate: (value) => value.trim().length >= 5
+  },
+  {
+    title: language === 'ur' ? 'گلی نمبر' : 'Street Number',
+    description: language === 'ur' ? 'گلی کا نمبر یا نام' : 'Street number or name',
+    icon: MapPinIcon,
+    field: 'street_number',
+    type: 'text',
+    placeholder: language === 'ur' ? 'گلی نمبر 12، مین بلیوارڈ' : 'Street #12, Main Boulevard',
+    required: false,
+    validate: () => true
+  },
+  {
+    title: language === 'ur' ? 'گھر / فلیٹ نمبر' : 'House / Flat Number',
+    description: language === 'ur' ? 'آپ کے گھر، عمارت یا فلیٹ کا نمبر' : 'Your house, building or flat number',
+    icon: HomeIcon,
+    field: 'house_number',
+    type: 'text',
+    placeholder: language === 'ur' ? 'گھر نمبر 42، فلیٹ نمبر 3B' : 'House #42, Flat #3B',
+    required: true,
+    validate: (value) => value.trim().length >= 1
+  },
+  {
+    title: language === 'ur' ? 'لینڈ مارک' : 'Landmark',
+    description: language === 'ur' ? 'قریبی مشہور جگہ (اختیاری)' : 'Nearby famous place (Optional)',
+    icon: IdentificationIcon,
+    field: 'landmark',
+    type: 'text',
+    placeholder: language === 'ur' ? 'مثلاً سٹی ہسپتال کے قریب، پارک کے سامنے' : 'Near City Hospital, Opposite Park',
+    required: false,
+    validate: () => true
+  },
+  {
+    title: language === 'ur' ? 'آرڈر نوٹس' : 'Order Notes',
+    description: language === 'ur' ? 'کوئی خاص ہدایات؟ (اختیاری)' : 'Any special instructions? (Optional)',
+    icon: IdentificationIcon,
+    field: 'notes',
+    type: 'textarea',
+    placeholder: language === 'ur' ? 'مثلاً ڈلیوری سے پہلے کال کریں، گیٹ پر چھوڑ دیں' : 'e.g., Call before delivery, Leave at gate, Ring doorbell',
+    required: false,
+    validate: () => true
+  }
+])
+
 const CheckoutPage = () => {
   const navigate = useNavigate()
   const [loading, setLoading] = useState(false)
   const [orderItem, setOrderItem] = useState(null)
   const [productDeliveryCharges, setProductDeliveryCharges] = useState(0)
   const [currentStep, setCurrentStep] = useState(0)
+
+  // Language was chosen on the product page and stored before navigating here
+  const [language] = useState(() => localStorage.getItem('checkoutLanguage') || 'en')
+  const t = TEXT[language]
+  const provinces = PROVINCES[language]
+  const formSteps = getFormSteps(language, provinces)
+
   const [formData, setFormData] = useState({
     customer_name: '',
-    customer_email: '',
     customer_phone: '',
     province: 'punjab',
     city: '',
@@ -39,125 +219,11 @@ const CheckoutPage = () => {
     notes: ''
   })
 
-  const provinces = [
-    { value: 'punjab', label: 'Punjab' },
-    { value: 'sindh', label: 'Sindh' },
-    { value: 'kpk', label: 'Khyber Pakhtunkhwa' },
-    { value: 'balochistan', label: 'Balochistan' },
-    { value: 'gilgit', label: 'Gilgit-Baltistan' },
-    { value: 'kashmir', label: 'Azad Kashmir' },
-    { value: 'islamabad', label: 'Islamabad' },
-  ]
-
-  // Form steps configuration
-  const formSteps = [
-    {
-      title: 'Full Name',
-      description: 'What should we call you?',
-      icon: UserIcon,
-      field: 'customer_name',
-      type: 'text',
-      placeholder: 'e.g., Muhammad Ali',
-      required: true,
-      validate: (value) => value.trim().length >= 2
-    },
-    {
-      title: 'Email Address',
-      description: 'We\'ll send order confirmation here',
-      icon: EnvelopeIcon,
-      field: 'customer_email',
-      type: 'email',
-      placeholder: 'your@email.com',
-      required: true,
-      validate: (value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)
-    },
-    {
-      title: 'Phone Number',
-      description: 'For delivery updates & tracking',
-      icon: PhoneIcon,
-      field: 'customer_phone',
-      type: 'tel',
-      placeholder: '03XXXXXXXXX',
-      required: true,
-      validate: (value) => value.trim().length >= 10
-    },
-    {
-      title: 'Province',
-      description: 'Select your province',
-      icon: MapPinIcon,
-      field: 'province',
-      type: 'select',
-      options: provinces,
-      required: true,
-      validate: (value) => value !== ''
-    },
-    {
-      title: 'City',
-      description: 'Enter your city name',
-      icon: MapPinIcon,
-      field: 'city',
-      type: 'text',
-      placeholder: 'e.g., Lahore, Karachi',
-      required: true,
-      validate: (value) => value.trim().length >= 2
-    },
-    {
-      title: 'Main Address Area',
-      description: 'Sector, Colony, or Area Name',
-      icon: BuildingOfficeIcon,
-      field: 'main_address',
-      type: 'text',
-      placeholder: 'e.g., Gulberg III, DHA Phase 5',
-      required: true,
-      validate: (value) => value.trim().length >= 5
-    },
-    {
-      title: 'Street Number',
-      description: 'Street number or name',
-      icon: MapPinIcon,
-      field: 'street_number',
-      type: 'text',
-      placeholder: 'Street #12, Main Boulevard',
-      required: false,
-      validate: () => true
-    },
-    {
-      title: 'House / Flat Number',
-      description: 'Your house, building or flat number',
-      icon: HomeIcon,
-      field: 'house_number',
-      type: 'text',
-      placeholder: 'House #42, Flat #3B',
-      required: true,
-      validate: (value) => value.trim().length >= 1
-    },
-    {
-      title: 'Landmark',
-      description: 'Nearby famous place (Optional)',
-      icon: IdentificationIcon,
-      field: 'landmark',
-      type: 'text',
-      placeholder: 'Near City Hospital, Opposite Park',
-      required: false,
-      validate: () => true
-    },
-    {
-      title: 'Order Notes',
-      description: 'Any special instructions? (Optional)',
-      icon: IdentificationIcon,
-      field: 'notes',
-      type: 'textarea',
-      placeholder: 'e.g., Call before delivery, Leave at gate, Ring doorbell',
-      required: false,
-      validate: () => true
-    }
-  ]
-
   useEffect(() => {
     window.scrollTo(0, 0)
     const savedOrder = localStorage.getItem('quickOrder')
     if (!savedOrder) {
-      toast.error('No item to checkout')
+      toast.error(t.noItemToast)
       navigate('/shop')
       return
     }
@@ -216,7 +282,7 @@ const CheckoutPage = () => {
       const value = formData[step.field]
       const isValid = step.validate(value)
       if (!isValid) {
-        toast.error(`Please enter valid ${step.title.toLowerCase()}`)
+        toast.error(t.invalidField(step.title))
         return false
       }
     }
@@ -241,7 +307,7 @@ const CheckoutPage = () => {
 
 const handlePlaceOrder = async () => {
     if (!orderItem) {
-      toast.error('No item to order')
+      toast.error(t.noItemOrder)
       return
     }
 
@@ -264,7 +330,6 @@ const handlePlaceOrder = async () => {
 
     const orderData = {
       customer_name: formData.customer_name,
-      customer_email: formData.customer_email,
       customer_phone: formData.customer_phone,
       province: formData.province,
       city: formData.city,
@@ -300,14 +365,14 @@ const handlePlaceOrder = async () => {
         })
         
         localStorage.removeItem('quickOrder')
-        toast.success('Order placed successfully!')
+        toast.success(t.orderSuccess)
         navigate(`/order-confirmation/${response.data.order_id}`)
       } else {
-        toast.error(response.data.message || 'Failed to place order')
+        toast.error(response.data.message || t.orderFail)
       }
     } catch (error) {
       console.error('Order error:', error)
-      const errorMsg = error.response?.data?.error || error.response?.data?.message || 'Something went wrong. Please try again.'
+      const errorMsg = error.response?.data?.error || error.response?.data?.message || t.genericError
       toast.error(errorMsg)
     } finally {
       setLoading(false)
@@ -319,7 +384,7 @@ const handlePlaceOrder = async () => {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading...</p>
+          <p className="text-gray-600">{t.loading}</p>
         </div>
       </div>
     )
@@ -341,7 +406,7 @@ const handlePlaceOrder = async () => {
   const currentValue = formData[currentStepData.field]
 
   return (
-    <div className="min-h-screen bg-gray-50 py-6 md:py-12">
+    <div className="min-h-screen bg-gray-50 py-6 md:py-12" dir={language === 'ur' ? 'rtl' : 'ltr'}>
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         
         {/* Back Button */}
@@ -350,15 +415,15 @@ const handlePlaceOrder = async () => {
           className="flex items-center gap-2 text-gray-600 hover:text-primary-600 mb-4 transition-colors"
         >
           <ArrowLeftIcon className="w-5 h-5" />
-          <span>Back to Shop</span>
+          <span>{t.backToShop}</span>
         </button>
 
         {/* Progress Bar */}
         <div className="mb-8">
           <div className="flex justify-between mb-2">
-            <h1 className="text-2xl md:text-3xl font-bold text-gray-800">Checkout</h1>
+            <h1 className="text-2xl md:text-3xl font-bold text-gray-800">{t.checkout}</h1>
             <span className="text-sm text-gray-500">
-              Step {currentStep + 1} of {formSteps.length}
+              {t.stepOf(currentStep + 1, formSteps.length)}
             </span>
           </div>
           <div className="w-full bg-gray-200 rounded-full h-2">
@@ -419,7 +484,7 @@ const handlePlaceOrder = async () => {
                 </p>
                 {!currentStepData.required && (
                   <span className="inline-block mt-1 text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">
-                    Optional
+                    {t.optional}
                   </span>
                 )}
               </div>
@@ -468,7 +533,7 @@ const handlePlaceOrder = async () => {
                     className="flex-1 border-2 border-gray-300 text-gray-700 py-3 rounded-xl font-semibold flex items-center justify-center gap-2 hover:bg-gray-50 transition"
                   >
                     <ChevronLeftIcon className="w-5 h-5" />
-                    Back
+                    {t.back}
                   </button>
                 )}
                 <button
@@ -481,16 +546,16 @@ const handlePlaceOrder = async () => {
                   {loading ? (
                     <>
                       <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                      Processing...
+                      {t.processing}
                     </>
                   ) : isLastStep ? (
                     <>
                       <CheckCircleIcon className="w-5 h-5" />
-                      Place Order
+                      {t.placeOrder}
                     </>
                   ) : (
                     <>
-                      Next
+                      {t.next}
                       <ChevronRightIcon className="w-5 h-5" />
                     </>
                   )}
@@ -498,7 +563,7 @@ const handlePlaceOrder = async () => {
               </div>
 
               <p className="text-xs text-gray-400 text-center mt-4">
-                Press Enter to go next
+                {t.pressEnter}
               </p>
             </div>
           </div>
@@ -506,7 +571,7 @@ const handlePlaceOrder = async () => {
           {/* Order Summary Sidebar */}
           <div className="lg:w-96">
             <div className="bg-white rounded-xl shadow-sm p-5 md:p-6 sticky top-20">
-              <h2 className="text-lg md:text-xl font-semibold mb-4">Order Summary</h2>
+              <h2 className="text-lg md:text-xl font-semibold mb-4">{t.orderSummary}</h2>
               
               <div className="flex gap-3 pb-4 border-b">
                 <img 
@@ -522,20 +587,20 @@ const handlePlaceOrder = async () => {
                     <p className="text-xs text-gray-500 mt-1">{orderItem.variant_details}</p>
                   )}
                   <p className="text-sm text-gray-600 mt-1">
-                    Qty: {productQuantity} × Rs. {productPrice.toLocaleString()}
+                    {t.qty}: {productQuantity} × Rs. {productPrice.toLocaleString()}
                   </p>
                 </div>
               </div>
 
               <div className="space-y-3 py-4 border-b">
                 <div className="flex justify-between text-gray-600">
-                  <span>Subtotal</span>
+                  <span>{t.subtotal}</span>
                   <span>Rs. {subtotal.toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between text-gray-600">
-                  <span>Delivery Charges</span>
+                  <span>{t.deliveryCharges}</span>
                   {hasFreeShipping ? (
-                    <span className="text-green-600 font-medium">Free Shipping</span>
+                    <span className="text-green-600 font-medium">{t.freeShipping}</span>
                   ) : (
                     <span>Rs. {deliveryCharge.toLocaleString()}</span>
                   )}
@@ -544,11 +609,11 @@ const handlePlaceOrder = async () => {
 
               <div className="pt-4">
                 <div className="flex justify-between text-lg md:text-xl font-bold text-gray-800">
-                  <span>Total Amount</span>
+                  <span>{t.totalAmount}</span>
                   <span className="text-primary-600">Rs. {totalAmount.toLocaleString()}</span>
                 </div>
                 <p className="text-xs text-gray-500 mt-2 text-center">
-                  *Cash on Delivery only
+                  {t.codNote}
                 </p>
               </div>
 
@@ -556,17 +621,17 @@ const handlePlaceOrder = async () => {
                 {hasFreeShipping ? (
                   <div className="flex items-center gap-2 text-sm text-green-600 bg-green-50 p-3 rounded-lg">
                     <BoltIcon className="w-4 h-4" />
-                    <span>✨ Free Shipping on this product!</span>
+                    <span>{t.freeShippingBanner}</span>
                   </div>
                 ) : (
                   <div className="flex items-center gap-2 text-sm text-orange-600 bg-orange-50 p-3 rounded-lg">
                     <TruckIcon className="w-4 h-4" />
-                    <span>Delivery charges: Rs. {deliveryCharge.toLocaleString()}</span>
+                    <span>{t.deliveryBanner(deliveryCharge.toLocaleString())}</span>
                   </div>
                 )}
                 <div className="flex items-center gap-2 text-sm text-gray-600">
                   <ShieldCheckIcon className="w-4 h-4 text-green-600" />
-                  <span>Secure & encrypted checkout</span>
+                  <span>{t.secureCheckout}</span>
                 </div>
               </div>
             </div>
