@@ -12,6 +12,7 @@
   "dependencies": {
     "@heroicons/react": "^2.2.0",
     "@sfpy/checkout-components": "^1.0.1",
+    "@vercel/analytics": "^2.0.1",
     "axios": "^1.15.2",
     "framer-motion": "^12.15.0",
     "lucide-react": "^0.511.0",

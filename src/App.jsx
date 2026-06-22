@@ -17,6 +17,7 @@ import PrivacyPolicyPage from './pages/PrivacyPolicyPage'
 import TermsPage from './pages/TermsPage'
 import RefundPolicyPage from './pages/RefundPolicyPage'
 import ShippingPolicyPage from './pages/ShippingPolicyPage'
+import { Analytics } from "@vercel/analytics/react"
 
 // Meta Pixel Initialization
 const PIXEL_ID = '1472228744582443'
@@ -65,6 +66,7 @@ function App() {
           },
         }}
       />
+      <Analytics/>
       <BrowserRouter>
         <ScrollToTop />
         <Routes>
